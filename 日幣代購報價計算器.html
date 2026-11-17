@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>日幣代購報價計算器</title>
+<style>
+  :root{
+    --bg:#f6f4ee; --card:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e6e2d8;
+    --accent:#c0392b; --accent-soft:#fbeae7; --pos:#1e8a4c; --neg:#c62828; --hl:#fff6d6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#141414; --card:#1f1f21; --ink:#f2f2f2; --muted:#9a9aa0; --line:#2e2e31;
+      --accent:#ff6b5b; --accent-soft:#3a2220; --pos:#4cd18a; --neg:#ff6b6b; --hl:#3a3420;
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(24px + env(safe-area-inset-bottom)) env(safe-area-inset-left)}
+  .wrap{max-width:520px;margin:0 auto;padding:0 14px}
+  header{padding:18px 2px 8px;display:flex;align-items:baseline;justify-content:space-between}
+  h1{font-size:20px;margin:0;font-weight:700}
+  h1 span{color:var(--accent)}
+  .sub{font-size:12px;color:var(--muted)}
+
+  .sticky{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 10px;
+    padding-top:calc(8px + env(safe-area-inset-top))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+  .field:last-child{margin-bottom:0}
+  label{font-size:13px;color:var(--muted);font-weight:600}
+  .inwrap{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:12px;
+    background:var(--bg);padding:0 12px;min-height:54px}
+  .inwrap:focus-within{border-color:var(--accent)}
+  .prefix{font-size:20px;color:var(--muted);margin-right:6px;font-weight:600}
+  input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-size:24px;
+    font-weight:700;padding:10px 0;outline:none;font-variant-numeric:tabular-nums}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row2 input{font-size:20px}
+  .clear{border:0;background:none;color:var(--muted);font-size:22px;padding:8px;min-width:44px;min-height:44px}
+
+  .cost{margin-top:12px;display:flex;justify-content:space-between;align-items:center;
+    background:var(--accent-soft);border-radius:12px;padding:12px 14px}
+  .cost .k{font-size:13px;color:var(--muted);font-weight:600}
+  .cost .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  thead th{font-size:12px;color:var(--muted);font-weight:600;text-align:right;padding:6px 8px 10px;border-bottom:1px solid var(--line)}
+  thead th:first-child{text-align:left}
+  tbody tr{cursor:pointer}
+  tbody tr:active{background:var(--hl)}
+  tbody td{padding:15px 8px;text-align:right;border-bottom:1px solid var(--line);font-size:18px}
+  tbody tr:last-child td{border-bottom:0}
+  tbody td:first-child{text-align:left;font-weight:700;color:var(--muted);font-size:16px}
+  td.price{font-weight:700}
+  td.pos{color:var(--pos);font-weight:700}
+  td.neg{color:var(--neg);font-weight:700}
+  .hint{font-size:12px;color:var(--muted);text-align:center;margin:10px 0 0}
+  .empty{text-align:center;color:var(--muted);padding:28px 0;font-size:15px}
+
+  details{margin-top:14px}
+  summary{list-style:none;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);
+    padding:12px 4px;min-height:44px;display:flex;align-items:center;gap:6px}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"⚙︎";font-size:16px}
+  .srow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .srow:last-of-type{border-bottom:0}
+  .srow label{font-size:15px;color:var(--ink);white-space:nowrap}
+  .stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);overflow:hidden}
+  .stepper:focus-within{border-color:var(--accent)}
+  .stepper button{border:0;background:transparent;color:var(--accent);font-size:22px;font-weight:700;width:44px;height:44px;cursor:pointer}
+  .stepper button:active{background:var(--accent-soft)}
+  .stepper input{width:72px;flex:none;text-align:center;font-size:18px;padding:0}
+  .preview{margin-top:10px;font-size:13px;color:var(--muted);background:var(--bg);border-radius:10px;padding:10px 12px;line-height:1.6}
+  a{color:var(--accent)}
+  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}
+
+  .toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:999px;font-size:14px;
+    opacity:0;transition:.2s;pointer-events:none;max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>代購報價<span>計算器</span></h1>
+    <div class="sub">JPY → TWD</div>
+  </header>
+
+  <div class="sticky">
+    <div class="card">
+      <div class="field">
+        <label for="jpy">日幣價格</label>
+        <div class="inwrap">
+          <span class="prefix">¥</span>
+          <input id="jpy" type="text" inputmode="decimal" placeholder="輸入日幣金額" autocomplete="off">
+          <button class="clear" id="clearBtn" aria-label="清除">×</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="rate">成本匯率</label>
+        <div class="inwrap"><input id="rate" type="text" inputmode="decimal" value="0.21"></div>
+      </div>
+      <div class="cost">
+        <span class="k">原價台幣（成本）</span>
+        <span class="v" id="costOut">NT$ 0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>報價匯率</th><th>台幣售價</th><th>扣原價獲利</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty" class="empty">輸入日幣價格就會即時算出報價</div>
+  </div>
+  <p class="hint">點任一列可複製報價給客人</p>
+
+  <details>
+    <summary>報價匯率設定</summary>
+    <div class="card">
+      <div class="srow">
+        <label for="rStart">起始匯率</label>
+        <div class="stepper"><button type="button" data-t="rStart" data-d="-1">−</button><input id="rStart" inputmode="decimal" value="0.22"><button type="button" data-t="rStart" data-d="1">+</button></div>
+      </div>
+      <div class="srow">
+        <label for="rEnd">結束匯率</label>
+        <div class="stepper"><button type="button" data-t="rEnd" data-d="-1">−</button><input id="rEnd" inputmode="decimal" value="0.28"><button type="button" data-t="rEnd" data-d="1">+</button></div>
+      </div>
+      <div class="srow">
+        <label for="rStep">間距</label>
+        <div class="stepper"><button type="button" data-t="rStep" data-d="-1">−</button><input id="rStep" inputmode="decimal" value="0.01"><button type="button" data-t="rStep" data-d="1">+</button></div>
+      </div>
+      <div class="preview" id="preview"></div>
+      <p class="note">
+        成本匯率可參考台灣銀行牌告：<a href="https://rate.bot.com.tw/xrt?Lang=zh-TW" target="_blank" rel="noopener">rate.bot.com.tw</a><br>
+        （日圓「現金賣出」或「即期賣出」）。設定會記在這支手機上。
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const ids = ['jpy','rate','rStart','rEnd','rStep'];
+  const KEY = 'jpyCalcSettings_v1';
+  const fmt = n => Math.round(n).toLocaleString('zh-TW');
+  const num = v => { const n = parseFloat(String(v).replace(/[,，\s]/g,'')); return isFinite(n) ? n : NaN; };
+
+  // restore (not jpy)
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+    ['rate','rStart','rEnd','rStep'].forEach(k => { if (s[k] != null && s[k] !== '') $(k).value = s[k]; });
+  }catch(e){}
+
+  function save(){
+    try{
+      const s = {}; ['rate','rStart','rEnd','rStep'].forEach(k => s[k] = $(k).value);
+      localStorage.setItem(KEY, JSON.stringify(s));
+    }catch(e){}
+  }
+
+  function rates(){
+    let a = num($('rStart').value), b = num($('rEnd').value), st = num($('rStep').value);
+    if (!(st > 0) || !isFinite(a) || !isFinite(b)) return [];
+    if (b < a) [a,b] = [b,a];
+    const out = [], P = 10000;
+    const ai = Math.round(a*P), bi = Math.round(b*P), si = Math.max(1, Math.round(st*P));
+    for (let x = ai; x <= bi && out.length < 60; x += si) out.push(x / P);
+    return out;
+  }
+
+  let rows = [];
+  function preview(){
+    const r = rates();
+    $('preview').textContent = r.length ? ('共 ' + r.length + ' 檔：' + r.join('、')) : '請確認起始、結束與間距';
+  }
+  function render(){
+    preview();
+    const jpy = num($('jpy').value);
+    const rate = num($('rate').value);
+    const tb = $('tbody');
+    tb.innerHTML = '';
+    rows = [];
+    if (!(jpy > 0) || !(rate > 0)){
+      $('costOut').textContent = 'NT$ 0';
+      $('empty').style.display = 'block';
+      save(); return;
+    }
+    $('empty').style.display = 'none';
+    const cost = jpy * rate;
+    $('costOut').textContent = 'NT$ ' + fmt(cost);
+    rates().forEach(r => {
+      const price = Math.round(jpy * r);
+      const profit = price - Math.round(cost);
+      const tr = document.createElement('tr');
+      const dec = (String(r).split('.')[1] || '').length;
+      tr.innerHTML =
+        '<td>' + r.toFixed(Math.max(2, dec)) + '</td>' +
+        '<td class="price">' + fmt(price) + '</td>' +
+        '<td class="' + (profit >= 0 ? 'pos' : 'neg') + '">' + (profit > 0 ? '+' : '') + fmt(profit) + '</td>';
+      tr.addEventListener('click', () => copy('¥' + fmt(jpy) + ' → NT$' + fmt(price)));
+      tb.appendChild(tr);
+    });
+    save();
+  }
+
+  let tt;
+  function toast(msg){
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 1600);
+  }
+  function copy(text){
+    const done = () => toast('已複製：' + text);
+    try{
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(() => fallback(text) ? done() : toast(text));
+      } else { fallback(text) ? done() : toast(text); }
+    }catch(e){ fallback(text) ? done() : toast(text); }
+  }
+  function fallback(text){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy');
+      document.body.removeChild(ta); return ok;
+    }catch(e){ return false; }
+  }
+
+  ids.forEach(id => $(id).addEventListener('input', render));
+  document.querySelectorAll('.stepper button').forEach(btn => btn.addEventListener('click', () => {
+    const t = $(btn.dataset.t), d = +btn.dataset.d;
+    const unit = btn.dataset.t === 'rStep' ? 0.005 : 0.01;
+    let v = num(t.value); if (!isFinite(v)) v = 0;
+    v = Math.round((v + d*unit) * 10000) / 10000;
+    if (v < (btn.dataset.t === 'rStep' ? 0.005 : 0)) return;
+    t.value = String(v); render();
+  }));
+  $('clearBtn').addEventListener('click', () => { $('jpy').value=''; render(); $('jpy').focus(); });
+  render();
+})();
+</script>
+</body>
+</html>
